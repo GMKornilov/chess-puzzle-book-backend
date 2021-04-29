@@ -1,0 +1,9 @@
+github.com/ajstarks/svgo v0.0.0-20200320125537-f189e35d30ca/go.mod h1:K08gAheRH3/J6wwsYMMT4xOr94bZjxIelGM0+d/wbFw=
+github.com/freeeve/uci v1.0.0 h1:78csi8o/KcPrt8QJwNuJokodKZ21Y9NNNwsKp/UWCMc=
+github.com/freeeve/uci v1.0.0/go.mod h1:wyjTnS4upCtW3U2k9roVlqS+bvbXbGG3Fy/BLb/SUGw=
+github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
+github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
+github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
+github.com/notnil/chess v1.5.0 h1:BcdmSGqZYhoqHsAqNpVTtPwRMOA4Sj8iZY1ZuPW4Umg=
+github.com/notnil/chess v1.5.0/go.mod h1:cRuJUIBFq9Xki05TWHJxHYkC+fFpq45IWwk94DdlCrA=
+gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
