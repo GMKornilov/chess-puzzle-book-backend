@@ -66,7 +66,7 @@ func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult, watc
 	fen := game.FEN()
 	e.SetFEN(fen)
 
-	results, err := e.GoDepth(res.Score - 1)
+	results, err := e.GoDepth(res.Score)
 	if err != nil {
 		return Turn{}, err
 	}
