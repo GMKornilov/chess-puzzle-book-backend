@@ -104,7 +104,7 @@ func generateTask(game chess.Game, e *uci.Engine, watchedPositions map[string]bo
 	filteredResults := filterResults(result.Results)
 	possibleTurns := make([]Turn, 0)
 
-	if !result.Results[0].Mate {
+	if !result.Results[0].Mate || result.Results[0].Score < 1 {
 		return Task{}, nil
 	}
 

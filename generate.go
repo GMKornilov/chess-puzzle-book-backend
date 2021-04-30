@@ -32,6 +32,11 @@ func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult, watc
 	if _, exists := watchedPositions[game.FEN()]; exists {
 		return Turn{}, nil
 	}
+
+	if res.Score < 0 {
+		return Turn{}, nil
+	}
+
 	watchedPositions[game.FEN()] = true
 
 	beginPos := game.Position()
@@ -57,10 +62,11 @@ func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult, watc
 		return Turn{}, err
 	}
 
+	game.Move(ansMove)
 	fen := game.FEN()
 	e.SetFEN(fen)
 
-	results, err := e.GoDepth(res.Score)
+	results, err := e.GoDepth(res.Score - 1)
 	if err != nil {
 		return Turn{}, err
 	}
