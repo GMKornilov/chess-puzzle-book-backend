@@ -3,7 +3,7 @@ package chess_puzzle_generator
 type Task struct {
 	StartFEN           string `json:"start_fen"`
 	FirstPossibleTurns []Turn `json:"first_possible_turns"`
-	IsBlackTurn        bool   `json:"is_black_turn"`
+	IsWhiteTurn        bool   `json:"is_white_turn"`
 }
 
 type Turn struct {
