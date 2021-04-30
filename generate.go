@@ -10,7 +10,7 @@ func compareResults(baseRes uci.ScoreResult, cmpRes uci.ScoreResult) bool {
 	if baseRes.Mate {
 		return cmpRes.Mate && baseRes.Score == cmpRes.Score
 	}
-	return baseRes.Score - cmpRes.Score <= 50
+	return baseRes.Score-cmpRes.Score <= 50
 }
 
 func filterResults(results []uci.ScoreResult) []uci.ScoreResult {
@@ -24,10 +24,15 @@ func filterResults(results []uci.ScoreResult) []uci.ScoreResult {
 	return filteredResults
 }
 
-func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult) (Turn, error) {
+func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult, watchedPositions map[string]bool) (Turn, error) {
 	if !res.Mate {
 		return Turn{}, fmt.Errorf("given result does not result to mate position")
 	}
+
+	if _, exists := watchedPositions[game.FEN()]; exists {
+		return Turn{}, nil
+	}
+	watchedPositions[game.FEN()] = true
 
 	beginPos := game.Position()
 	firstMove, err := chess.UCINotation{}.Decode(beginPos, res.BestMoves[0])
@@ -64,11 +69,13 @@ func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult) (Tur
 	continueTurns := make([]Turn, 0)
 
 	for _, filteredResult := range filteredResults {
-		turn, err := generateCheckmate(game, e, filteredResult)
+		turn, err := generateCheckmate(game, e, filteredResult, watchedPositions)
 		if err != nil {
 			return Turn{}, err
 		}
-		continueTurns = append(continueTurns, turn)
+		if turn.SanNotation != "" {
+			continueTurns = append(continueTurns, turn)
+		}
 	}
 
 	resTurn := Turn{

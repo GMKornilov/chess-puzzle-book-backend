@@ -27,21 +27,20 @@ func setupEngine(path string) (*uci.Engine, error) {
 }
 
 
-func AnalyzeGame(path string, r io.Reader) error {
+func AnalyzeGame(path string, r io.Reader) ([]Task, error) {
 	var e *uci.Engine
 	var err error
 	if e, err = setupEngine(path); err != nil {
-		return err
+		return nil, err
 	}
 	defer e.Close()
 
 	pgnFunc, err := chess.PGN(r)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	game := chess.NewGame(pgnFunc)
-	analyzeGame(game, e)
-	return nil
+	return analyzeGame(game, e)
 }
 
 func AnalyzeAllGames(path string, r io.Reader) ([]Task, error)  {
@@ -68,12 +67,13 @@ func AnalyzeAllGames(path string, r io.Reader) ([]Task, error)  {
 }
 
 func analyzeGame(g *chess.Game, e *uci.Engine) ([]Task, error) {
+	watchedPositions := make(map[string]bool, 0)
 	moves := g.Moves()
 	newGame := chess.NewGame()
 	res := make([]Task, 0)
 	for _, move := range moves {
 		newGame.Move(move)
-		task, err := generateTask(*newGame, e)
+		task, err := generateTask(*newGame, e, watchedPositions)
 		if err != nil {
 			return nil, err
 		}
@@ -84,7 +84,11 @@ func analyzeGame(g *chess.Game, e *uci.Engine) ([]Task, error) {
 	return res, nil
 }
 
-func generateTask(game chess.Game, e *uci.Engine) (Task, error) {
+func generateTask(game chess.Game, e *uci.Engine, watchedPositions map[string]bool) (Task, error) {
+	if _, ok := watchedPositions[game.FEN()]; ok {
+		return Task{}, nil
+	}
+
 	err := e.SetFEN(game.FEN())
 	if err != nil {
 		return Task{}, err
@@ -94,6 +98,9 @@ func generateTask(game chess.Game, e *uci.Engine) (Task, error) {
 		return Task{}, err
 	}
 
+	if len(result.Results) == 0 {
+		return Task{}, nil
+	}
 	filteredResults := filterResults(result.Results)
 	possibleTurns := make([]Turn, 0)
 
@@ -102,17 +109,19 @@ func generateTask(game chess.Game, e *uci.Engine) (Task, error) {
 	}
 
 	for _, filteredResult := range filteredResults {
-		turn, err := generateCheckmate(game, e, filteredResult)
+		turn, err := generateCheckmate(game, e, filteredResult, watchedPositions)
 		if err != nil {
 			return Task{}, err
 		}
-		possibleTurns = append(possibleTurns, turn)
+		if turn.SanNotation != "" {
+			possibleTurns = append(possibleTurns, turn)
+		}
 	}
 
 	taskRes := Task{
 		StartFEN:           game.FEN(),
 		FirstPossibleTurns: possibleTurns,
-		IsWhiteTurn:        game.Position().Turn() == chess.Black,
+		IsWhiteTurn:        game.Position().Turn() == chess.White,
 	}
 	return taskRes, nil
 }
