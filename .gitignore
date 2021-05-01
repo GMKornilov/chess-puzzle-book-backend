@@ -15,7 +15,7 @@
 # vendor/
 
 # Debug executable folder
-cmd/
+cmd/debug
 
 # GoLand directory
 .idea/

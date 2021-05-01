@@ -1,4 +1,4 @@
-package chess_puzzle_generator
+package puzgen
 
 import (
 	"fmt"

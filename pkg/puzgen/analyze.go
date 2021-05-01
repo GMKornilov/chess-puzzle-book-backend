@@ -1,4 +1,4 @@
-package chess_puzzle_generator
+package puzgen
 
 import (
 	"github.com/freeeve/uci"
@@ -8,14 +8,14 @@ import (
 
 const maxDepth = 10
 
-func setupEngine(path string) (*uci.Engine, error) {
-	e, err := uci.NewEngine(path)
+func setupEngine(path string, arg ...string) (*uci.Engine, error) {
+	e, err := uci.NewEngine(path, arg...)
 	if err != nil {
 		return nil, err
 	}
 
 	err = e.SetOptions(uci.Options{
-		MultiPV: 10,
+		MultiPV: maxDepth,
 		Hash:    128,
 		Ponder:  false,
 		OwnBook: true,
@@ -27,10 +27,10 @@ func setupEngine(path string) (*uci.Engine, error) {
 }
 
 
-func AnalyzeGame(path string, r io.Reader) ([]Task, error) {
+func AnalyzeGame(path string, r io.Reader, arg ...string) ([]Task, error) {
 	var e *uci.Engine
 	var err error
-	if e, err = setupEngine(path); err != nil {
+	if e, err = setupEngine(path, arg...); err != nil {
 		return nil, err
 	}
 	defer e.Close()
@@ -43,10 +43,10 @@ func AnalyzeGame(path string, r io.Reader) ([]Task, error) {
 	return analyzeGame(game, e)
 }
 
-func AnalyzeAllGames(path string, r io.Reader) ([]Task, error)  {
+func AnalyzeAllGames(path string, r io.Reader, arg ...string) ([]Task, error)  {
 	var e *uci.Engine
 	var err error
-	if e, err = setupEngine(path); err != nil {
+	if e, err = setupEngine(path, arg...); err != nil {
 		return nil, err
 	}
 	defer e.Close()
@@ -93,7 +93,7 @@ func generateTask(game chess.Game, e *uci.Engine, watchedPositions map[string]bo
 	if err != nil {
 		return Task{}, err
 	}
-	result, err := e.GoDepth(10)
+	result, err := e.GoDepth(maxDepth)
 	if err != nil {
 		return Task{}, err
 	}
