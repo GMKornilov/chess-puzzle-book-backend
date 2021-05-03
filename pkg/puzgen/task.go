@@ -1,11 +1,21 @@
 package puzgen
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 type Task struct {
-	StartFEN           string `json:"start_fen"`
-	FirstPossibleTurns []Turn `json:"first_possible_turns"`
-	IsWhiteTurn        bool   `json:"is_white_turn"`
+	StartFEN           string   `json:"start_fen"`
+	FirstPossibleTurns []Turn   `json:"first_possible_turns"`
+	IsWhiteTurn        bool     `json:"is_white_turn"`
+	GameData           GameData `json:"game_data"`
+}
+
+type GameData struct {
+	WhitePlayer string `json:"white_player"`
+	BlackPlayer string `json:"black_player"`
+	Date        primitive.DateTime
 }
 
 func (t Task) String() string {

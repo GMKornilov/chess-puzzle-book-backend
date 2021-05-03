@@ -3,9 +3,14 @@ package puzgen
 import (
 	"github.com/freeeve/uci"
 	"github.com/notnil/chess"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"time"
 )
 
-const maxDepth = 10
+const (
+	maxDepth = 10
+	layout = "2006.01.02"
+)
 
 func setupEngine(path string, arg ...string) (*uci.Engine, error) {
 	e, err := uci.NewEngine(path, arg...)
@@ -33,7 +38,22 @@ func AnalyzeGame(path string, game *chess.Game, arg ...string) ([]Task, error) {
 		return nil, err
 	}
 	defer e.Close()
-	return analyzeGame(game, e)
+	tasks, err := analyzeGame(game, e)
+	if err != nil {
+		return nil, err
+	}
+	gameTime, err := time.Parse(layout, game.GetTagPair("Date").Value)
+	if err != nil {
+		return nil, err
+	}
+	for ind := range tasks {
+		tasks[ind].GameData = GameData{
+			WhitePlayer: game.GetTagPair("White").Value,
+			BlackPlayer: game.GetTagPair("Black").Value,
+			Date:        primitive.NewDateTimeFromTime(gameTime),
+		}
+	}
+	return tasks, nil
 }
 
 func AnalyzeAllGames(path string, games []*chess.Game, arg ...string) ([]Task, error)  {
@@ -50,6 +70,17 @@ func AnalyzeAllGames(path string, games []*chess.Game, arg ...string) ([]Task, e
 		newTasks, err := analyzeGame(game, e)
 		if err != nil {
 			return nil, err
+		}
+		gameTime, err := time.Parse(layout, game.GetTagPair("Date").Value)
+		if err != nil {
+			return nil, err
+		}
+		for ind := range newTasks {
+			newTasks[ind].GameData = GameData{
+				WhitePlayer: game.GetTagPair("White").Value,
+				BlackPlayer: game.GetTagPair("Black").Value,
+				Date:        primitive.NewDateTimeFromTime(gameTime),
+			}
 		}
 		res = append(res, newTasks...)
 	}
