@@ -3,7 +3,6 @@ package puzgen
 import (
 	"github.com/freeeve/uci"
 	"github.com/notnil/chess"
-	"io"
 )
 
 const maxDepth = 10
@@ -27,23 +26,17 @@ func setupEngine(path string, arg ...string) (*uci.Engine, error) {
 }
 
 
-func AnalyzeGame(path string, r io.Reader, arg ...string) ([]Task, error) {
+func AnalyzeGame(path string, game *chess.Game, arg ...string) ([]Task, error) {
 	var e *uci.Engine
 	var err error
 	if e, err = setupEngine(path, arg...); err != nil {
 		return nil, err
 	}
 	defer e.Close()
-
-	pgnFunc, err := chess.PGN(r)
-	if err != nil {
-		return nil, err
-	}
-	game := chess.NewGame(pgnFunc)
 	return analyzeGame(game, e)
 }
 
-func AnalyzeAllGames(path string, r io.Reader, arg ...string) ([]Task, error)  {
+func AnalyzeAllGames(path string, games []*chess.Game, arg ...string) ([]Task, error)  {
 	var e *uci.Engine
 	var err error
 	if e, err = setupEngine(path, arg...); err != nil {
@@ -51,12 +44,9 @@ func AnalyzeAllGames(path string, r io.Reader, arg ...string) ([]Task, error)  {
 	}
 	defer e.Close()
 
-	scanner := chess.NewScanner(r)
-
 	res := make([]Task, 0)
 
-	for scanner.Scan() {
-		game := scanner.Next()
+	for _, game := range games {
 		newTasks, err := analyzeGame(game, e)
 		if err != nil {
 			return nil, err

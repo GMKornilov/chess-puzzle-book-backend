@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/gmkornilov/chess-puzzle-generator/pkg/puzgen"
+	"github.com/notnil/chess"
 	"os"
 )
 
@@ -17,7 +18,13 @@ func main() {
 		panic(err)
 	}
 
-	tasks, err := puzgen.AnalyzeGame("stockfish", reader)
+	gameFunc, err := chess.PGN(reader)
+	if err != nil {
+		panic(err)
+	}
+	game := chess.NewGame(gameFunc)
+
+	tasks, err := puzgen.AnalyzeGame("stockfish", game)
 
 	fmt.Println(len(tasks))
 
