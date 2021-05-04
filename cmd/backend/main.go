@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/gmkornilov/chess-puzzle-generator/pkg/puzgen"
+	"github.com/gmkornilov/chess-puzzle-book-backend/pkg/puzgen"
 	"github.com/notnil/chess"
 	"os"
 )
@@ -13,7 +13,7 @@ func main() {
 		panic(err)
 	}
 
-	reader, err := os.Open(pwd + "\\cmd\\chesscom.pgn")
+	reader, err := os.Open(pwd + "\\cmd\\debug\\chesscom.pgn")
 	if err != nil {
 		panic(err)
 	}

@@ -3,7 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
-	"github.com/gmkornilov/chess-puzzle-generator/internal/config"
+	"github.com/gmkornilov/chess-puzzle-book-backend/internal/config"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )

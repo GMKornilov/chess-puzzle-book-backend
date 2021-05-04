@@ -3,8 +3,8 @@ package dao
 import (
 	"context"
 	"fmt"
-	"github.com/gmkornilov/chess-puzzle-generator/internal/db"
-	"github.com/gmkornilov/chess-puzzle-generator/pkg/puzgen"
+	"github.com/gmkornilov/chess-puzzle-book-backend/internal/db"
+	"github.com/gmkornilov/chess-puzzle-book-backend/pkg/puzgen"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -17,9 +17,11 @@ type TaskRepository interface {
 
 	InsertTask(task puzgen.Task) error
 
+	InsertAllTasks(tasks []puzgen.Task) error
+
 	GetLastUserTask(username string) (puzgen.Task, error)
 
-	GetUserTasksBetweenDates(startTime primitive.DateTime, endTime primitive.DateTime) ([]puzgen.Task, error)
+	GetUserTasksBetweenDates(username string, startTime primitive.DateTime, endTime primitive.DateTime) ([]puzgen.Task, error)
 }
 
 type taskRepository struct {
@@ -38,7 +40,6 @@ func (t *taskRepository) GetRandomTaskForElo(elo int) (puzgen.Task, error) {
 		"target_elo", bson.D{{"$gte", elo - 100}, {"$lte", elo + 100}},
 	}}}}
 	sampleStage := bson.D{{"$sample", bson.D{{"size", 1}}}}
-
 
 	cursor, err := t.dbClient.TaskCollection.Aggregate(ctx, mongo.Pipeline{matchStage, sampleStage})
 	if err != nil {
@@ -63,6 +64,18 @@ func (t *taskRepository) InsertTask(task puzgen.Task) error {
 	return err
 }
 
+func (t *taskRepository) InsertAllTasks(tasks []puzgen.Task) error {
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
+	defer cancel()
+
+	toInsert := make([]interface{}, len(tasks))
+	for i := range tasks {
+		toInsert[i] = tasks[i]
+	}
+	_, err := t.dbClient.TaskCollection.InsertMany(ctx, toInsert)
+	return err
+}
+
 func (t *taskRepository) GetLastUserTask(username string) (puzgen.Task, error) {
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
 	defer cancel()
@@ -75,7 +88,7 @@ func (t *taskRepository) GetLastUserTask(username string) (puzgen.Task, error) {
 			{"game_data.white_player", username},
 			{"game_data.black_player", username},
 		},
-	}}
+		}}
 	cur := t.dbClient.TaskCollection.FindOne(ctx, filter, opts)
 	var task puzgen.Task
 	if err := cur.Decode(&task); err != nil {
@@ -84,16 +97,20 @@ func (t *taskRepository) GetLastUserTask(username string) (puzgen.Task, error) {
 	return task, nil
 }
 
-func (t *taskRepository) GetUserTasksBetweenDates(startTime primitive.DateTime, endTime primitive.DateTime) ([]puzgen.Task, error) {
+func (t *taskRepository) GetUserTasksBetweenDates(username string, startTime primitive.DateTime, endTime primitive.DateTime) ([]puzgen.Task, error) {
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
 	defer cancel()
 
 	filter := bson.D{
+		{"$or", bson.D{
+			{"game_data.white_player", username},
+			{"game_data.black_player", username},
+		}},
 		{
 			"game_data.date", bson.D{
-					{"$gte", startTime},
-					{"$lte", endTime},
-				},
+				{"$gte", startTime},
+				{"$lte", endTime},
+			},
 		},
 	}
 
