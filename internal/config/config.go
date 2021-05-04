@@ -18,6 +18,10 @@ type Configuration struct {
 		DatabaseName string `envconfig:"MONGO_DATABASE"`
 		Collection   string `envconfig:"MONGO_COLLECTION"`
 	}
+	Stockfish struct {
+		Path string   `envconfig:"STOCKFISH_PATH"`
+		Args []string `envconfig:"STOCKFISH_ARGS"`
+	}
 }
 
 func InitConfig() (*Configuration, error) {

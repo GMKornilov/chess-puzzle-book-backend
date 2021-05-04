@@ -1,7 +1,38 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/gmkornilov/chess-puzzle-book-backend/pkg/puzgen"
+	"github.com/notnil/chess"
+	"os"
+)
 
 func main() {
-	fmt.Println("test scraper")
+	pwd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	reader, err := os.Open(pwd + "\\cmd\\debug\\chesscom.pgn")
+	if err != nil {
+		panic(err)
+	}
+
+	gameFunc, err := chess.PGN(reader)
+	if err != nil {
+		panic(err)
+	}
+	game := chess.NewGame(gameFunc)
+
+	tasks, err := puzgen.AnalyzeGame("stockfish", game)
+
+	fmt.Println(len(tasks))
+
+	if err != nil {
+		panic(err)
+	}
+
+	for _, task := range tasks {
+		fmt.Printf("%s\n", task)
+	}
 }

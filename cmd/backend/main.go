@@ -1,38 +1,35 @@
 package main
 
 import (
-	"fmt"
-	"github.com/gmkornilov/chess-puzzle-book-backend/pkg/puzgen"
-	"github.com/notnil/chess"
-	"os"
+	"github.com/gin-gonic/gin"
+	"github.com/gmkornilov/chess-puzzle-book-backend/internal/api"
+	"github.com/gmkornilov/chess-puzzle-book-backend/internal/config"
+	"github.com/gmkornilov/chess-puzzle-book-backend/internal/dao"
+	"github.com/gmkornilov/chess-puzzle-book-backend/internal/db"
+	"github.com/gmkornilov/chess-puzzle-book-backend/internal/scraper"
 )
 
 func main() {
-	pwd, err := os.Getwd()
+	r := gin.Default()
+	cfg, err := config.InitConfig()
 	if err != nil {
 		panic(err)
 	}
 
-	reader, err := os.Open(pwd + "\\cmd\\debug\\chesscom.pgn")
+
+	db, err := db.NewDbClient(cfg)
 	if err != nil {
 		panic(err)
 	}
+	taskRepo := dao.NewTaskRepository(db)
 
-	gameFunc, err := chess.PGN(reader)
-	if err != nil {
-		panic(err)
-	}
-	game := chess.NewGame(gameFunc)
+	scrapperFactory := scraper.NewLichessGameScraperFactory(cfg, taskRepo)
 
-	tasks, err := puzgen.AnalyzeGame("stockfish", game)
+	taskApi := api.NewTaskApi(taskRepo, scrapperFactory)
 
-	fmt.Println(len(tasks))
+	r.GET("/task", taskApi.Task)
+	r.GET("/task/:username", taskApi.StartTask)
+	r.GET("/job/:job_id", taskApi.GetJobStatus)
 
-	if err != nil {
-		panic(err)
-	}
-
-	for _, task := range tasks {
-		fmt.Printf("%s\n", task)
-	}
+	r.Run(cfg.Server.Host + cfg.Server.Port)
 }

@@ -94,7 +94,7 @@ func analyzeGame(g *chess.Game, e *uci.Engine) ([]Task, error) {
 	res := make([]Task, 0)
 	for _, move := range moves {
 		newGame.Move(move)
-		task, err := generateTask(*newGame, e, watchedPositions)
+		task, err := GenerateTaskFromPosition(*newGame, e, watchedPositions)
 		if err != nil {
 			return nil, err
 		}
@@ -105,7 +105,7 @@ func analyzeGame(g *chess.Game, e *uci.Engine) ([]Task, error) {
 	return res, nil
 }
 
-func generateTask(game chess.Game, e *uci.Engine, watchedPositions map[string]bool) (Task, error) {
+func GenerateTaskFromPosition(game chess.Game, e *uci.Engine, watchedPositions map[string]bool) (Task, error) {
 	if _, ok := watchedPositions[game.FEN()]; ok {
 		return Task{}, nil
 	}
