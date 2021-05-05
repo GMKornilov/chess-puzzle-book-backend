@@ -70,7 +70,7 @@ func (l *LichessGameScraper) Error() error {
 }
 
 func (l *LichessGameScraper) Scrap() {
-	url := fmt.Sprintf("lichess.org/api/games/user/%s?since=%d", l.nickname, time.Now().Unix())
+	url := fmt.Sprintf("https://lichess.org/api/games/user/%s?since=%d", l.nickname, time.Now().AddDate(0, -1, 0).Unix())
 	resp, err := http.Get(url)
 	if err != nil {
 		l.mu.Lock()

@@ -5,7 +5,7 @@ import (
 )
 
 var (
-	config *Configuration
+	config Configuration
 )
 
 type Configuration struct {
@@ -25,6 +25,6 @@ type Configuration struct {
 }
 
 func InitConfig() (*Configuration, error) {
-	err := envconfig.Process("", config)
-	return config, err
+	err := envconfig.Process("", &config)
+	return &config, err
 }

@@ -56,6 +56,7 @@ func (t *TaskApi) StartTask(ctx *gin.Context) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.activeJobs[id] = &worker
+	worker.StartWork()
 	ctx.JSON(http.StatusOK, gin.H{
 		"job_id": id,
 	})
@@ -76,7 +77,7 @@ func (t *TaskApi) GetJobStatus(ctx *gin.Context) {
 		if worker.Error() != nil {
 			ctx.JSON(http.StatusOK, gin.H{
 				"done": done,
-				"error": worker.Error(),
+				"error": worker.Error().Error(),
 			})
 		} else {
 			ctx.JSON(http.StatusOK, gin.H{
