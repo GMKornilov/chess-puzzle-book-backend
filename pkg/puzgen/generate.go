@@ -57,7 +57,23 @@ func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult, watc
 
 	game.Move(firstMove)
 	ansPos := game.Position()
-	ansMove, err := chess.UCINotation{}.Decode(ansPos, res.BestMoves[1])
+	if len(res.BestMoves) < 2 {
+		fmt.Printf("%+v %s\n", res, beginPos.String())
+	}
+
+	var ansMove *chess.Move
+	var ansMoveUci string
+	if len(res.BestMoves) == 1 {
+		e.SetFEN(game.FEN())
+		ansResults, err := e.GoDepth(res.Score)
+		if err != nil {
+			return Turn{}, err
+		}
+		ansMoveUci = ansResults.Results[0].BestMoves[0]
+	} else {
+		ansMoveUci = res.BestMoves[1]
+	}
+	ansMove, err = chess.UCINotation{}.Decode(ansPos, ansMoveUci)
 	if err != nil {
 		return Turn{}, err
 	}

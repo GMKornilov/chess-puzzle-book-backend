@@ -9,7 +9,7 @@ import (
 
 const (
 	maxDepth = 10
-	layout = "2006.01.02"
+	layout   = "2006.01.02"
 )
 
 func setupEngine(path string, arg ...string) (*uci.Engine, error) {
@@ -29,7 +29,6 @@ func setupEngine(path string, arg ...string) (*uci.Engine, error) {
 	}
 	return e, nil
 }
-
 
 func AnalyzeGame(path string, game *chess.Game, arg ...string) ([]Task, error) {
 	var e *uci.Engine
@@ -56,7 +55,7 @@ func AnalyzeGame(path string, game *chess.Game, arg ...string) ([]Task, error) {
 	return tasks, nil
 }
 
-func AnalyzeAllGames(path string, games []*chess.Game, arg ...string) ([]Task, error)  {
+func AnalyzeAllGames(path string, games []*chess.Game, arg ...string) ([]Task, error) {
 	var e *uci.Engine
 	var err error
 	if e, err = setupEngine(path, arg...); err != nil {
