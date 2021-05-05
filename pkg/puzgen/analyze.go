@@ -101,9 +101,9 @@ func analyzeGame(g *chess.Game, e *uci.Engine) ([]Task, error) {
 		if task.StartFEN != "" {
 			var eloStr string
 			if g.Position().Turn() == chess.White {
-				eloStr = g.GetTagPair("WhiteElo").Key
+				eloStr = g.GetTagPair("WhiteElo").Value
 			} else {
-				eloStr = g.GetTagPair("BlackElo").Key
+				eloStr = g.GetTagPair("BlackElo").Value
 			}
 			elo, _ := strconv.Atoi(eloStr)
 			task.TargetELO = estimateAllElos(moves[ind:], *g, task.FirstPossibleTurns, elo)

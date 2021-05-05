@@ -6,9 +6,9 @@ import (
 	"github.com/gmkornilov/chess-puzzle-book-backend/internal/dao"
 	"github.com/gmkornilov/chess-puzzle-book-backend/pkg/puzgen"
 	"github.com/notnil/chess"
+	"log"
 	"net/http"
 	"sync"
-	"time"
 )
 
 type LichessGameScraperFactory struct {
@@ -25,9 +25,10 @@ func NewLichessGameScraperFactory(cfg *config.Configuration, taskRepo dao.TaskRe
 	}
 }
 
-func (f LichessGameScraperFactory) CreateLichessScrapper(nickname string) LichessGameScraper {
+func (f LichessGameScraperFactory) CreateLichessScrapper(nickname string, last int) LichessGameScraper {
 	return LichessGameScraper{
 		nickname:      nickname,
+		last:          last,
 		stockfishPath: f.StockfishPath,
 		stockfishArgs: f.StockfishArgs,
 		taskRepo:      f.TaskRepo,
@@ -41,8 +42,10 @@ type LichessGameScraper struct {
 	err   error
 	done  bool
 
+	nickname string
+	last     int
+
 	taskRepo      dao.TaskRepository
-	nickname      string
 	stockfishPath string
 	stockfishArgs []string
 }
@@ -70,12 +73,14 @@ func (l *LichessGameScraper) Error() error {
 }
 
 func (l *LichessGameScraper) Scrap() {
-	url := fmt.Sprintf("https://lichess.org/api/games/user/%s?since=%d", l.nickname, time.Now().AddDate(0, -1, 0).Unix())
+	//url := fmt.Sprintf("https://lichess.org/api/games/user/%s?since=%d", l.nickname, time.Now().AddDate(0, -1, 0).Unix())
+	url := fmt.Sprintf("https://lichess.org/api/games/user/%s?max=%d", l.nickname, l.last)
 	fmt.Println(url)
 	resp, err := http.Get(url)
 	if err != nil {
 		l.mu.Lock()
 		defer l.mu.Unlock()
+		log.Println(err.Error())
 		l.err = fmt.Errorf("error fetching %s games", l.nickname)
 		l.done = true
 		return
@@ -97,9 +102,9 @@ func (l *LichessGameScraper) Scrap() {
 	games := make([]*chess.Game, 0)
 	var tagGame *chess.Game
 	for i, game := range buggedGames {
-		if i % 3 == 0 {
+		if i%3 == 0 {
 			games = append(games, game)
-		} else if i % 3 == 1 {
+		} else if i%3 == 1 {
 			tagGame = game
 		} else {
 			for _, tagPair := range tagGame.TagPairs() {
@@ -113,6 +118,7 @@ func (l *LichessGameScraper) Scrap() {
 	if err != nil {
 		l.mu.Lock()
 		defer l.mu.Unlock()
+		log.Println(err)
 		l.err = fmt.Errorf("error generating puzzles")
 		l.done = true
 		return

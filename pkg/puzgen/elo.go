@@ -36,6 +36,7 @@ func estimatePercent(moves []*chess.Move, game chess.Game, turn Turn) float64 {
 		}
 		turn = newTurn
 		correctMoves++
+		game.Move(move)
 	}
 	totalMoves := correctMoves + findMinDepth(turn)
 	return float64(correctMoves) / float64(totalMoves)

@@ -50,7 +50,15 @@ func (t *TaskApi) Task(ctx *gin.Context) {
 
 func (t *TaskApi) StartTask(ctx *gin.Context) {
 	name := ctx.Param("username")
-	worker := t.TaskWorkerFactory.CreateLichessScrapper(name)
+	lastStr := ctx.DefaultQuery("last", "20")
+	last, err := strconv.Atoi(lastStr)
+	if err != nil || last <= 0 {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"error": "last shoul be positive integer",
+		})
+	}
+
+	worker := t.TaskWorkerFactory.CreateLichessScrapper(name, last)
 	t.totalJobs++
 	byteValue := []byte(strconv.Itoa(t.totalJobs))
 	id := fmt.Sprintf("%x", md5.Sum(byteValue))
