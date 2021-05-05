@@ -57,9 +57,6 @@ func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult, watc
 
 	game.Move(firstMove)
 	ansPos := game.Position()
-	if len(res.BestMoves) < 2 {
-		fmt.Printf("%+v %s\n", res, beginPos.String())
-	}
 
 	var ansMove *chess.Move
 	var ansMoveUci string

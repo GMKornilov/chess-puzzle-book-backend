@@ -4,6 +4,7 @@ import (
 	"github.com/freeeve/uci"
 	"github.com/notnil/chess"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"strconv"
 	"time"
 )
 
@@ -91,13 +92,21 @@ func analyzeGame(g *chess.Game, e *uci.Engine) ([]Task, error) {
 	moves := g.Moves()
 	newGame := chess.NewGame()
 	res := make([]Task, 0)
-	for _, move := range moves {
+	for ind, move := range moves {
 		newGame.Move(move)
 		task, err := GenerateTaskFromPosition(*newGame, e, watchedPositions)
 		if err != nil {
 			return nil, err
 		}
 		if task.StartFEN != "" {
+			var eloStr string
+			if g.Position().Turn() == chess.White {
+				eloStr = g.GetTagPair("WhiteElo").Key
+			} else {
+				eloStr = g.GetTagPair("BlackElo").Key
+			}
+			elo, _ := strconv.Atoi(eloStr)
+			task.TargetELO = estimateAllElos(moves[ind:], *g, task.FirstPossibleTurns, elo)
 			res = append(res, task)
 		}
 	}

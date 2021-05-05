@@ -40,7 +40,9 @@ func (t *TaskApi) Task(ctx *gin.Context) {
 
 	task, err := t.TaskRepository.GetRandomTaskForElo(elo)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
 		return
 	}
 	ctx.JSON(http.StatusOK, task)
