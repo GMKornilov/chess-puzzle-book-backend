@@ -71,6 +71,7 @@ func (l *LichessGameScraper) Error() error {
 
 func (l *LichessGameScraper) Scrap() {
 	url := fmt.Sprintf("https://lichess.org/api/games/user/%s?since=%d", l.nickname, time.Now().AddDate(0, -1, 0).Unix())
+	fmt.Println(url)
 	resp, err := http.Get(url)
 	if err != nil {
 		l.mu.Lock()
@@ -89,10 +90,25 @@ func (l *LichessGameScraper) Scrap() {
 
 	defer resp.Body.Close()
 	scanner := chess.NewScanner(resp.Body)
-	games := make([]*chess.Game, 0)
+	buggedGames := make([]*chess.Game, 0)
 	for scanner.Scan() {
-		games = append(games, scanner.Next())
+		buggedGames = append(buggedGames, scanner.Next())
 	}
+	games := make([]*chess.Game, 0)
+	var tagGame *chess.Game
+	for i, game := range buggedGames {
+		if i % 3 == 0 {
+			games = append(games, game)
+		} else if i % 3 == 1 {
+			tagGame = game
+		} else {
+			for _, tagPair := range tagGame.TagPairs() {
+				game.AddTagPair(tagPair.Key, tagPair.Value)
+			}
+			games = append(games, game)
+		}
+	}
+
 	tasks, err := puzgen.AnalyzeAllGames(l.stockfishPath, games, l.stockfishArgs...)
 	if err != nil {
 		l.mu.Lock()
