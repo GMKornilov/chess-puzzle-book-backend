@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	maxDepth = 10
-	Layout   = "2006.01.02"
+	maxDepth   = 10
+	Layout     = "2006.01.02"
+	TimeLayout = "15:04:05"
 )
 
 func SetupEngine(path string, arg ...string) (*uci.Engine, error) {
@@ -137,10 +138,20 @@ func GenerateTaskFromPosition(game chess.Game, e *uci.Engine, watchedPositions m
 	}
 	elo, _ := strconv.Atoi(eloStr)
 
-	gameTime, err := time.Parse(Layout, game.GetTagPair("Date").Value)
+	extraTime, err := time.Parse(TimeLayout, game.GetTagPair("UTCTime").Value)
 	if err != nil {
 		return Task{}, err
 	}
+
+	gameTime, err := time.Parse(Layout, game.GetTagPair("UTCDate").Value)
+	if err != nil {
+		return Task{}, err
+	}
+
+	gameTime = gameTime.Add(time.Second * time.Duration(extraTime.Second()) +
+		time.Minute * time.Duration(extraTime.Minute()) +
+		time.Hour * time.Duration(extraTime.Hour()))
+
 
 	taskRes := Task{
 		StartFEN:           game.FEN(),

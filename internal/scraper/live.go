@@ -77,8 +77,12 @@ func (l *LiveLichessScraper) Main() error {
 				Value: strconv.Itoa(gameStart.Players[blackInd].Rating),
 			}
 			date := chess.TagPair{
-				Key:   "Date",
+				Key:   "UTCDate",
 				Value: time.Now().Format(puzgen.Layout),
+			}
+			tm := chess.TagPair{
+				Key:   "UTCTime",
+				Value: time.Now().Format(puzgen.TimeLayout),
 			}
 
 			tags := []chess.TagPair{
@@ -87,6 +91,7 @@ func (l *LiveLichessScraper) Main() error {
 				whiteElo,
 				blackElo,
 				date,
+				tm,
 			}
 			log.Printf("New game with start position: %s\n", gameStart.Fen)
 			l.curAnalyzer, err = l.NewLiveGameAnalyzer(tags)
