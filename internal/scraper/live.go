@@ -156,6 +156,7 @@ func (l *LiveGameAnalyzer) Analyze() {
 		if task.StartFEN == "" {
 			continue
 		}
+		log.Printf("Generated task: %+v\n", task)
 		err = l.taskRepo.InsertTask(task)
 		if err != nil {
 			log.Println(err.Error())
