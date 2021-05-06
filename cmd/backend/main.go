@@ -21,6 +21,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	defer db.Close()
 	taskRepo := dao.NewTaskRepository(db)
 
 	scrapperFactory := scraper.NewLichessGameScraperFactory(cfg, taskRepo)

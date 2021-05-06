@@ -45,7 +45,7 @@ func AnalyzeGame(path string, game *chess.Game, arg ...string) ([]Task, error) {
 	return tasks, nil
 }
 
-func AnalyzeAllGames(path string, games []*chess.Game, arg ...string) ([]Task, error) {
+func AnalyzeAllGames(path string, games []*chess.Game, progressChan chan<- struct{}, arg ...string) ([]Task, error) {
 	var e *uci.Engine
 	var err error
 	if e, err = SetupEngine(path, arg...); err != nil {
@@ -60,6 +60,7 @@ func AnalyzeAllGames(path string, games []*chess.Game, arg ...string) ([]Task, e
 		if err != nil {
 			return nil, err
 		}
+		progressChan <- struct{}{}
 		res = append(res, newTasks...)
 	}
 	return res, nil

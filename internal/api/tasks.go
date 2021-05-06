@@ -98,6 +98,7 @@ func (t *TaskApi) GetJobStatus(ctx *gin.Context) {
 	} else {
 		ctx.JSON(http.StatusOK, gin.H{
 			"done": done,
+			"progress": worker.Progress(),
 		})
 	}
 }

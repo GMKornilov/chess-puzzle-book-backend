@@ -42,6 +42,10 @@ type LichessGameScraper struct {
 	err   error
 	done  bool
 
+	loadedTasks  bool
+	overallTasks int
+	doneTasks    int
+
 	nickname string
 	last     int
 
@@ -54,6 +58,18 @@ func (l *LichessGameScraper) Done() bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return l.done
+}
+
+func (l *LichessGameScraper) Progress() float64 {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.done {
+		return 1
+	}
+	if !l.loadedTasks {
+		return 0
+	}
+	return 0.1 + 0.9*float64(l.doneTasks)/float64(l.overallTasks)
 }
 
 func (l *LichessGameScraper) StartWork() {
@@ -114,7 +130,22 @@ func (l *LichessGameScraper) Scrap() {
 		}
 	}
 
-	tasks, err := puzgen.AnalyzeAllGames(l.stockfishPath, games, l.stockfishArgs...)
+	l.mu.Lock()
+	l.loadedTasks = true
+	l.overallTasks = len(games)
+	l.doneTasks = 0
+	l.mu.Unlock()
+
+	progressChan := make(chan struct{}, l.overallTasks)
+	go func(l *LichessGameScraper, progressChan <-chan struct{}) {
+		for _ = range progressChan {
+			l.mu.Lock()
+			l.doneTasks++
+			l.mu.Unlock()
+		}
+	}(l, progressChan)
+
+	tasks, err := puzgen.AnalyzeAllGames(l.stockfishPath, games, progressChan, l.stockfishArgs...)
 	if err != nil {
 		l.mu.Lock()
 		defer l.mu.Unlock()
