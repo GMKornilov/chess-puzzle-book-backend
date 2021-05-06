@@ -19,5 +19,9 @@ func main() {
 	}
 	taskRepo := dao.NewTaskRepository(db)
 	analyzer := scraper.NewLiveLichessScraper(taskRepo, *cfg)
-	analyzer.Main()
+
+	err = analyzer.Main()
+	if err != nil {
+		panic(err)
+	}
 }

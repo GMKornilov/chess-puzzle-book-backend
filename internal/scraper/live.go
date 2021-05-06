@@ -57,8 +57,9 @@ func (l *LiveLichessScraper) Main() error {
 				whiteInd = 1
 			}
 			blackInd := 1 - whiteInd
-
-			close(l.curAnalyzer.MoveChan)
+			if l.curAnalyzer != nil {
+				close(l.curAnalyzer.GameChan)
+			}
 			white := chess.TagPair{
 				Key:   "White",
 				Value: gameStart.Players[whiteInd].User.Name,
@@ -87,8 +88,8 @@ func (l *LiveLichessScraper) Main() error {
 				blackElo,
 				date,
 			}
-			log.Printf("New pos: %s\n", gameStart.Fen)
-			l.curAnalyzer, err = l.NewLiveGameAnalyzer(tags, gameStart.Fen)
+			log.Printf("New game with start position: %s\n", gameStart.Fen)
+			l.curAnalyzer, err = l.NewLiveGameAnalyzer(tags)
 			if err != nil {
 				return err
 			}
@@ -100,42 +101,41 @@ func (l *LiveLichessScraper) Main() error {
 			if err != nil {
 				return err
 			}
-			log.Printf("New move: %s\n", gameTurn.TurnUciNotation)
-			l.curAnalyzer.MoveChan <- gameTurn.TurnUciNotation
+			gameTurn.Fen += " - - 0 1"
+			log.Printf("New position: %s\n", gameTurn.Fen)
+
+			fenFunc, err := chess.FEN(gameTurn.Fen)
+			if err != nil {
+				return err
+			}
+			game := chess.NewGame(fenFunc)
+
+			l.curAnalyzer.GameChan <- game
 		default:
 			return fmt.Errorf("unknown action type from lichess: %s", cur.Action)
 		}
 	}
 }
 
-func (l *LiveLichessScraper) NewLiveGameAnalyzer(tags []chess.TagPair, fen string) (*LiveGameAnalyzer, error) {
+func (l *LiveLichessScraper) NewLiveGameAnalyzer(tags []chess.TagPair) (*LiveGameAnalyzer, error) {
 	e, err := puzgen.SetupEngine(l.stockfishPath, l.stockfishArgs...)
 	if err != nil {
 		return nil, err
 	}
-
-	fenFunc, err := chess.FEN(fen)
-	if err != nil {
-		return nil, err
-	}
-	game := chess.NewGame(chess.UseNotation(chess.UCINotation{}), fenFunc)
-	for _, tag := range tags {
-		game.AddTagPair(tag.Key, tag.Value)
-	}
 	return &LiveGameAnalyzer{
+		tags:     tags,
 		engine:   e,
-		game:     game,
 		taskRepo: l.taskRepo,
 		// euristic size of chan (we assume we don't put 100 moves while analyzing 1 move)
-		MoveChan: make(chan string, 100),
+		GameChan: make(chan *chess.Game, 100),
 	}, nil
 }
 
 type LiveGameAnalyzer struct {
+	tags     []chess.TagPair
 	engine   *uci.Engine
-	game     *chess.Game
 	taskRepo dao.TaskRepository
-	MoveChan chan string
+	GameChan chan *chess.Game
 }
 
 func (l *LiveGameAnalyzer) StartAnalyze() {
@@ -143,14 +143,12 @@ func (l *LiveGameAnalyzer) StartAnalyze() {
 }
 
 func (l *LiveGameAnalyzer) Analyze() {
-	watchedPositions := make(map[string] bool, 0)
-	for moveUci := range l.MoveChan {
-		err := l.game.MoveStr(moveUci)
-		if err != nil {
-			log.Println(err.Error())
-			return
+	watchedPositions := make(map[string]bool, 0)
+	for game := range l.GameChan {
+		for _, tag := range l.tags {
+			game.AddTagPair(tag.Key, tag.Value)
 		}
-		task, err := puzgen.GenerateTaskFromPosition(*l.game, l.engine, watchedPositions)
+		task, err := puzgen.GenerateTaskFromPosition(*game, l.engine, watchedPositions)
 		if err != nil {
 			log.Println(err.Error())
 			return
