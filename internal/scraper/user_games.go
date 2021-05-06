@@ -90,7 +90,21 @@ func (l *LichessGameScraper) Error() error {
 
 func (l *LichessGameScraper) Scrap() {
 	//url := fmt.Sprintf("https://lichess.org/api/games/user/%s?since=%d", l.nickname, time.Now().AddDate(0, -1, 0).Unix())
+	lastTask, err := l.taskRepo.GetLastUserTask(l.nickname)
+	if err != nil {
+		l.mu.Lock()
+		defer l.mu.Unlock()
+		log.Println(err.Error())
+		l.err = fmt.Errorf("error fetching last %s game", l.nickname)
+		l.done = true
+		return
+	}
+
 	url := fmt.Sprintf("https://lichess.org/api/games/user/%s?max=%d", l.nickname, l.last)
+	if lastTask.StartFEN != "" {
+		url += fmt.Sprintf("&since=%d", lastTask.GameData.Date)
+	}
+
 	fmt.Println(url)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -130,15 +144,30 @@ func (l *LichessGameScraper) Scrap() {
 		}
 	}
 
+	var doneTasks []puzgen.Task
+	if lastTask.StartFEN == "" {
+		doneTasks = []puzgen.Task{}
+	} else {
+		doneTasks, err = l.taskRepo.GetLastUserTasks(l.nickname, int64(l.last - len(games)))
+		if err != nil {
+			l.mu.Lock()
+			defer l.mu.Unlock()
+			l.done = true
+			log.Println(err.Error())
+			l.err = fmt.Errorf("error getting already parsed tasks")
+			return
+		}
+	}
+
 	l.mu.Lock()
 	l.loadedTasks = true
-	l.overallTasks = len(games)
-	l.doneTasks = 0
+	l.overallTasks = l.last
+	l.doneTasks = l.last - len(games)
 	l.mu.Unlock()
 
 	progressChan := make(chan struct{}, l.overallTasks)
 	go func(l *LichessGameScraper, progressChan <-chan struct{}) {
-		for _ = range progressChan {
+		for range progressChan {
 			l.mu.Lock()
 			l.doneTasks++
 			l.mu.Unlock()
@@ -164,6 +193,7 @@ func (l *LichessGameScraper) Scrap() {
 		return
 	}
 
+	tasks = append(tasks, doneTasks...)
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.tasks = tasks

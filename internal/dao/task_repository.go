@@ -21,6 +21,8 @@ type TaskRepository interface {
 
 	GetLastUserTask(username string) (puzgen.Task, error)
 
+	GetLastUserTasks(username string, n int64) ([]puzgen.Task, error)
+
 	GetUserTasksBetweenDates(username string, startTime primitive.DateTime, endTime primitive.DateTime) ([]puzgen.Task, error)
 }
 
@@ -76,6 +78,31 @@ func (t *taskRepository) InsertAllTasks(tasks []puzgen.Task) error {
 	return err
 }
 
+func (t *taskRepository) GetLastUserTasks(username string, n int64) ([]puzgen.Task, error) {
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
+	defer cancel()
+
+	opts := options.Find()
+	opts.SetSort(bson.D{{"game_data.date", -1}})
+	opts.Limit = &(n)
+
+	filter := bson.D{
+		{"$or", bson.A{
+			bson.D{{"game_data.white_player", username}},
+			bson.D{{"game_data.black_player", username}},
+		},
+		}}
+	cur, err := t.dbClient.TaskCollection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, err
+	}
+	var tasks []puzgen.Task
+	if err := cur.All(ctx, &tasks); err != nil {
+		return nil, err
+	}
+	return tasks, nil
+}
+
 func (t *taskRepository) GetLastUserTask(username string) (puzgen.Task, error) {
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
 	defer cancel()
@@ -84,14 +111,17 @@ func (t *taskRepository) GetLastUserTask(username string) (puzgen.Task, error) {
 	opts.SetSort(bson.D{{"game_data.date", -1}})
 
 	filter := bson.D{
-		{"$or", bson.D{
-			{"game_data.white_player", username},
-			{"game_data.black_player", username},
+		{"$or", bson.A{
+			bson.D{{"game_data.white_player", username}},
+			bson.D{{"game_data.black_player", username}},
 		},
 		}}
 	cur := t.dbClient.TaskCollection.FindOne(ctx, filter, opts)
 	var task puzgen.Task
 	if err := cur.Decode(&task); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return puzgen.Task{}, nil
+		}
 		return puzgen.Task{}, err
 	}
 	return task, nil
@@ -102,15 +132,15 @@ func (t *taskRepository) GetUserTasksBetweenDates(username string, startTime pri
 	defer cancel()
 
 	filter := bson.D{
-		{"$or", bson.D{
-			{"game_data.white_player", username},
-			{"game_data.black_player", username},
+		{"$or", bson.A{
+			bson.D{{"game_data.white_player", username}},
+			bson.D{{"game_data.black_player", username}},
 		}},
 		{
 			"game_data.date", bson.D{
-				{"$gte", startTime},
-				{"$lte", endTime},
-			},
+			{"$gte", startTime},
+			{"$lte", endTime},
+		},
 		},
 	}
 
