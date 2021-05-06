@@ -1,38 +1,23 @@
 package main
 
 import (
-	"fmt"
-	"github.com/gmkornilov/chess-puzzle-book-backend/pkg/puzgen"
-	"github.com/notnil/chess"
-	"os"
+	"github.com/gmkornilov/chess-puzzle-book-backend/internal/config"
+	"github.com/gmkornilov/chess-puzzle-book-backend/internal/dao"
+	"github.com/gmkornilov/chess-puzzle-book-backend/internal/db"
+	"github.com/gmkornilov/chess-puzzle-book-backend/internal/scraper"
 )
 
 func main() {
-	pwd, err := os.Getwd()
+	cfg, err := config.InitScraperConfig()
 	if err != nil {
 		panic(err)
 	}
 
-	reader, err := os.Open(pwd + "\\cmd\\debug\\chesscom.pgn")
+	db, err := db.NewDbClientScraper(cfg)
 	if err != nil {
 		panic(err)
 	}
-
-	gameFunc, err := chess.PGN(reader)
-	if err != nil {
-		panic(err)
-	}
-	game := chess.NewGame(gameFunc)
-
-	tasks, err := puzgen.AnalyzeGame("stockfish", game)
-
-	fmt.Println(len(tasks))
-
-	if err != nil {
-		panic(err)
-	}
-
-	for _, task := range tasks {
-		fmt.Printf("%s\n", task)
-	}
+	taskRepo := dao.NewTaskRepository(db)
+	analyzer := scraper.NewLiveLichessScraper(taskRepo, *cfg)
+	analyzer.Main()
 }

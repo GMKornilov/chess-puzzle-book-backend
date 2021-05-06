@@ -17,7 +17,7 @@ type LichessGameScraperFactory struct {
 	TaskRepo      dao.TaskRepository
 }
 
-func NewLichessGameScraperFactory(cfg *config.Configuration, taskRepo dao.TaskRepository) *LichessGameScraperFactory {
+func NewLichessGameScraperFactory(cfg *config.BackendConfiguration, taskRepo dao.TaskRepository) *LichessGameScraperFactory {
 	return &LichessGameScraperFactory{
 		StockfishPath: cfg.Stockfish.Path,
 		StockfishArgs: cfg.Stockfish.Args,

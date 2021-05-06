@@ -10,10 +10,10 @@ import (
 
 const (
 	maxDepth = 10
-	layout   = "2006.01.02"
+	Layout   = "2006.01.02"
 )
 
-func setupEngine(path string, arg ...string) (*uci.Engine, error) {
+func SetupEngine(path string, arg ...string) (*uci.Engine, error) {
 	e, err := uci.NewEngine(path, arg...)
 	if err != nil {
 		return nil, err
@@ -34,7 +34,7 @@ func setupEngine(path string, arg ...string) (*uci.Engine, error) {
 func AnalyzeGame(path string, game *chess.Game, arg ...string) ([]Task, error) {
 	var e *uci.Engine
 	var err error
-	if e, err = setupEngine(path, arg...); err != nil {
+	if e, err = SetupEngine(path, arg...); err != nil {
 		return nil, err
 	}
 	defer e.Close()
@@ -42,24 +42,13 @@ func AnalyzeGame(path string, game *chess.Game, arg ...string) ([]Task, error) {
 	if err != nil {
 		return nil, err
 	}
-	gameTime, err := time.Parse(layout, game.GetTagPair("Date").Value)
-	if err != nil {
-		return nil, err
-	}
-	for ind := range tasks {
-		tasks[ind].GameData = GameData{
-			WhitePlayer: game.GetTagPair("White").Value,
-			BlackPlayer: game.GetTagPair("Black").Value,
-			Date:        primitive.NewDateTimeFromTime(gameTime),
-		}
-	}
 	return tasks, nil
 }
 
 func AnalyzeAllGames(path string, games []*chess.Game, arg ...string) ([]Task, error) {
 	var e *uci.Engine
 	var err error
-	if e, err = setupEngine(path, arg...); err != nil {
+	if e, err = SetupEngine(path, arg...); err != nil {
 		return nil, err
 	}
 	defer e.Close()
@@ -71,17 +60,6 @@ func AnalyzeAllGames(path string, games []*chess.Game, arg ...string) ([]Task, e
 		if err != nil {
 			return nil, err
 		}
-		gameTime, err := time.Parse(layout, game.GetTagPair("Date").Value)
-		if err != nil {
-			return nil, err
-		}
-		for ind := range newTasks {
-			newTasks[ind].GameData = GameData{
-				WhitePlayer: game.GetTagPair("White").Value,
-				BlackPlayer: game.GetTagPair("Black").Value,
-				Date:        primitive.NewDateTimeFromTime(gameTime),
-			}
-		}
 		res = append(res, newTasks...)
 	}
 	return res, nil
@@ -91,6 +69,9 @@ func analyzeGame(g *chess.Game, e *uci.Engine) ([]Task, error) {
 	watchedPositions := make(map[string]bool, 0)
 	moves := g.Moves()
 	newGame := chess.NewGame()
+	for _, tagPair := range g.TagPairs() {
+		newGame.AddTagPair(tagPair.Key, tagPair.Value)
+	}
 	res := make([]Task, 0)
 	for ind, move := range moves {
 		newGame.Move(move)
@@ -147,10 +128,30 @@ func GenerateTaskFromPosition(game chess.Game, e *uci.Engine, watchedPositions m
 		}
 	}
 
+	var eloStr string
+	if game.Position().Turn() == chess.White {
+		eloStr = game.GetTagPair("WhiteElo").Value
+	} else {
+		eloStr = game.GetTagPair("BlackElo").Value
+	}
+	elo, _ := strconv.Atoi(eloStr)
+
+	gameTime, err := time.Parse(Layout, game.GetTagPair("Date").Value)
+	if err != nil {
+		return Task{}, err
+	}
+
 	taskRes := Task{
 		StartFEN:           game.FEN(),
 		FirstPossibleTurns: possibleTurns,
 		IsWhiteTurn:        game.Position().Turn() == chess.White,
+		TargetELO:          elo,
+		GameData: GameData{
+			WhitePlayer: game.GetTagPair("White").Value,
+			BlackPlayer: game.GetTagPair("Black").Value,
+			Date:        primitive.NewDateTimeFromTime(gameTime),
+		},
 	}
+
 	return taskRes, nil
 }

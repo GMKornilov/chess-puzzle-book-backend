@@ -11,13 +11,13 @@ import (
 
 func main() {
 	r := gin.Default()
-	cfg, err := config.InitConfig()
+	cfg, err := config.InitBackendConfig()
 	if err != nil {
 		panic(err)
 	}
 
 
-	db, err := db.NewDbClient(cfg)
+	db, err := db.NewDbClientBackend(cfg)
 	if err != nil {
 		panic(err)
 	}

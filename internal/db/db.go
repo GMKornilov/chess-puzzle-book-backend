@@ -17,7 +17,30 @@ func (r *TaskDbClient) Close() error {
 	return r.client.Disconnect(context.TODO())
 }
 
-func NewDbClient(cfg *config.Configuration) (*TaskDbClient, error) {
+func NewDbClientBackend(cfg *config.BackendConfiguration) (*TaskDbClient, error) {
+	clientOpts := options.Client().ApplyURI(cfg.Database.Address)
+
+	dbClient := &TaskDbClient{}
+
+	client, err := mongo.Connect(context.TODO(), clientOpts)
+	if err != nil {
+		return nil, err
+	}
+	dbClient.client = client
+
+	err = client.Ping(context.TODO(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	dbClient.TaskCollection = client.Database(cfg.Database.DatabaseName).Collection(cfg.Database.Collection)
+	if dbClient.TaskCollection == nil {
+		return nil, fmt.Errorf("Can't resolve collection %s", cfg.Database.DatabaseName + "." + cfg.Database.Collection)
+	}
+	return dbClient, nil
+}
+
+func NewDbClientScraper (cfg *config.ScraperConfiguration) (*TaskDbClient, error) {
 	clientOpts := options.Client().ApplyURI(cfg.Database.Address)
 
 	dbClient := &TaskDbClient{}
