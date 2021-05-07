@@ -1,7 +1,6 @@
 package puzgen
 
 import (
-	"fmt"
 	"github.com/freeeve/uci"
 	"github.com/notnil/chess"
 )
@@ -26,7 +25,7 @@ func filterResults(results []uci.ScoreResult) []uci.ScoreResult {
 
 func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult, watchedPositions map[string]bool) (Turn, error) {
 	if !res.Mate {
-		return Turn{}, fmt.Errorf("given result does not result to mate position")
+		return Turn{}, nil
 	}
 
 	if _, exists := watchedPositions[game.FEN()]; exists {
@@ -96,7 +95,11 @@ func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult, watc
 			continueTurns = append(continueTurns, turn)
 		}
 	}
-
+	
+	if len(continueTurns) == 0 {
+		return Turn{}, nil
+	}
+	
 	resTurn := Turn{
 		SanNotation:           chess.AlgebraicNotation{}.Encode(beginPos, firstMove),
 		IsLastTurn:            false,

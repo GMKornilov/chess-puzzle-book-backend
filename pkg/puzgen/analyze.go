@@ -152,6 +152,9 @@ func GenerateTaskFromPosition(game chess.Game, e *uci.Engine, watchedPositions m
 		time.Minute * time.Duration(extraTime.Minute()) +
 		time.Hour * time.Duration(extraTime.Hour()))
 
+	if len(possibleTurns) == 0 {
+		return Task{}, nil
+	}
 
 	taskRes := Task{
 		StartFEN:           game.FEN(),

@@ -102,7 +102,7 @@ func (l *LichessGameScraper) Scrap() {
 	url := fmt.Sprintf("https://lichess.org/api/games/user/%s?max=%d", l.nickname, l.last)
 	if lastTask.StartFEN != "" {
 		// add one second offset
-		url += fmt.Sprintf("&since=%d", lastTask.GameData.Date + 1000)
+		url += fmt.Sprintf("&since=%d", lastTask.GameData.Date+1000)
 	}
 	log.Println(url)
 
@@ -122,10 +122,10 @@ func (l *LichessGameScraper) Scrap() {
 
 	var gamesInDb = 0
 	var doneTasks []puzgen.Task
-	if lastTask.StartFEN == "" || l.last - len(games) == 0 {
+	if lastTask.StartFEN == "" || l.last-len(games) == 0 {
 		doneTasks = []puzgen.Task{}
 	} else {
-		doneTasks, gamesInDb, err = l.taskRepo.GetLastUserTasks(l.nickname, int64(l.last - len(games)))
+		doneTasks, gamesInDb, err = l.taskRepo.GetLastUserTasks(l.nickname, int64(l.last-len(games)))
 		if err != nil {
 			l.mu.Lock()
 			defer l.mu.Unlock()
@@ -136,7 +136,7 @@ func (l *LichessGameScraper) Scrap() {
 		}
 	}
 
-	if len(games) + gamesInDb <= l.last {
+	if len(games)+gamesInDb <= l.last {
 		firstTask, err := l.taskRepo.GetFirstUserTask(l.nickname)
 		if err != nil {
 			l.mu.Lock()
@@ -147,7 +147,7 @@ func (l *LichessGameScraper) Scrap() {
 			return
 		}
 		if firstTask.GameData != (puzgen.Task{}).GameData {
-			url = fmt.Sprintf("https://lichess.org/api/games/user/%s?max=%d&until=%d", l.nickname, l.last, firstTask.GameData.Date - 1000)
+			url = fmt.Sprintf("https://lichess.org/api/games/user/%s?max=%d&until=%d", l.nickname, l.last-(gamesInDb+len(games)), firstTask.GameData.Date-1000)
 			log.Println(url)
 			gamesBefore, err := l.GetGamesByUrl(url)
 			if err != nil {
@@ -182,6 +182,7 @@ func (l *LichessGameScraper) Scrap() {
 	}(l, progressChan)
 
 	tasks, err := puzgen.AnalyzeAllGames(l.stockfishPath, games, progressChan, l.stockfishArgs...)
+	close(progressChan)
 	if err != nil {
 		l.mu.Lock()
 		defer l.mu.Unlock()
@@ -215,7 +216,7 @@ func (l *LichessGameScraper) GetGamesByUrl(url string) ([]*chess.Game, error) {
 
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusNotFound {
-		return nil,	userNotFound{fmt.Errorf("user %s doesn't exist on lichess", l.nickname)}
+		return nil, userNotFound{fmt.Errorf("user %s doesn't exist on lichess", l.nickname)}
 	}
 
 	scanner := chess.NewScanner(resp.Body)
