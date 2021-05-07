@@ -54,7 +54,7 @@ func (t *TaskApi) StartTask(ctx *gin.Context) {
 	last, err := strconv.Atoi(lastStr)
 	if err != nil || last <= 0 {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"error": "last shoul be positive integer",
+			"error": "last should be positive integer",
 		})
 	}
 

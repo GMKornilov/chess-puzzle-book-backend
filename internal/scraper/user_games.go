@@ -89,7 +89,6 @@ func (l *LichessGameScraper) Error() error {
 }
 
 func (l *LichessGameScraper) Scrap() {
-	//url := fmt.Sprintf("https://lichess.org/api/games/user/%s?since=%d", l.nickname, time.Now().AddDate(0, -1, 0).Unix())
 	lastTask, err := l.taskRepo.GetLastUserTask(l.nickname)
 	if err != nil {
 		l.mu.Lock()
@@ -102,10 +101,10 @@ func (l *LichessGameScraper) Scrap() {
 
 	url := fmt.Sprintf("https://lichess.org/api/games/user/%s?max=%d", l.nickname, l.last)
 	if lastTask.StartFEN != "" {
-		url += fmt.Sprintf("&since=%d", lastTask.GameData.Date)
+		// add one second offset
+		url += fmt.Sprintf("&since=%d", lastTask.GameData.Date + 1000)
 	}
 
-	fmt.Println(url)
 	resp, err := http.Get(url)
 	if err != nil {
 		l.mu.Lock()

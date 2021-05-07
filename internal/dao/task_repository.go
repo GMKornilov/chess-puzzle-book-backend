@@ -82,25 +82,67 @@ func (t *taskRepository) GetLastUserTasks(username string, n int64) ([]puzgen.Ta
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
 	defer cancel()
 
-	opts := options.Find()
-	opts.SetSort(bson.D{{"game_data.date", -1}})
-	opts.Limit = &(n)
-
-	filter := bson.D{
-		{"$or", bson.A{
-			bson.D{{"game_data.white_player", username}},
-			bson.D{{"game_data.black_player", username}},
-		},
-		}}
-	cur, err := t.dbClient.TaskCollection.Find(ctx, filter, opts)
+	matchStage := bson.D{
+		{"$match", bson.D{
+			{"$or", bson.A{
+				bson.D{{"game_data.white_player", username}},
+				bson.D{{"game_data.black_player", username}},
+			}},
+		}},
+	}
+	groupStage := bson.D{
+		{"$group", bson.D{
+			{"_id", "$game_data.date"},
+			{"data", bson.D{
+				{"$push", "$$ROOT"},
+			}},
+		}},
+	}
+	sortStage := bson.D{
+		{"$sort", bson.D{
+			{"_id", -1},
+		}},
+	}
+	limitStage := bson.D{
+		{"$limit", n},
+	}
+	nullGroupStage := bson.D{
+		{"$group", bson.D{
+			{"_id", "null"},
+			{"data", bson.D{
+				{"$push", "$data"},
+			}},
+		}},
+	}
+	projectStage := bson.D{
+		{"$project", bson.D{
+			{"result", bson.D{
+				{"$reduce", bson.D{
+					{"input", "$data"},
+					{"initialValue", bson.A{}},
+					{"in", bson.D{
+						{"$concatArrays", bson.A{"$$value", "$$this"}},
+					}},
+				}},
+			}},
+			{"_id", 0},
+		}},
+	}
+	cur, err := t.dbClient.TaskCollection.Aggregate(ctx, mongo.Pipeline{matchStage, groupStage, sortStage, limitStage, nullGroupStage, projectStage})
 	if err != nil {
 		return nil, err
 	}
-	var tasks []puzgen.Task
-	if err := cur.All(ctx, &tasks); err != nil {
+	var result []struct {
+		Result []puzgen.Task `bson:"result"`
+	}
+	if err := cur.All(ctx, &result); err != nil {
 		return nil, err
 	}
-	return tasks, nil
+	if len(result) != 1 {
+		return nil, fmt.Errorf("null aggregate returned more than one group(???)")
+	}
+
+	return result[0].Result, nil
 }
 
 func (t *taskRepository) GetLastUserTask(username string) (puzgen.Task, error) {
