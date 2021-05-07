@@ -19,9 +19,11 @@ type TaskRepository interface {
 
 	InsertAllTasks(tasks []puzgen.Task) error
 
+	GetFirstUserTask(username string) (puzgen.Task, error)
+
 	GetLastUserTask(username string) (puzgen.Task, error)
 
-	GetLastUserTasks(username string, n int64) ([]puzgen.Task, error)
+	GetLastUserTasks(username string, n int64) ([]puzgen.Task, int, error)
 
 	GetUserTasksBetweenDates(username string, startTime primitive.DateTime, endTime primitive.DateTime) ([]puzgen.Task, error)
 }
@@ -78,7 +80,7 @@ func (t *taskRepository) InsertAllTasks(tasks []puzgen.Task) error {
 	return err
 }
 
-func (t *taskRepository) GetLastUserTasks(username string, n int64) ([]puzgen.Task, error) {
+func (t *taskRepository) GetLastUserTasks(username string, n int64) ([]puzgen.Task, int, error) {
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
 	defer cancel()
 
@@ -112,6 +114,9 @@ func (t *taskRepository) GetLastUserTasks(username string, n int64) ([]puzgen.Ta
 			{"data", bson.D{
 				{"$push", "$data"},
 			}},
+			{"count", bson.D{
+				{"$sum", 1},
+			}},
 		}},
 	}
 	projectStage := bson.D{
@@ -126,23 +131,25 @@ func (t *taskRepository) GetLastUserTasks(username string, n int64) ([]puzgen.Ta
 				}},
 			}},
 			{"_id", 0},
+			{"count", 1},
 		}},
 	}
 	cur, err := t.dbClient.TaskCollection.Aggregate(ctx, mongo.Pipeline{matchStage, groupStage, sortStage, limitStage, nullGroupStage, projectStage})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	var result []struct {
 		Result []puzgen.Task `bson:"result"`
+		Count  int           `bson:"count"`
 	}
 	if err := cur.All(ctx, &result); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if len(result) != 1 {
-		return nil, fmt.Errorf("null aggregate returned more than one group(???)")
+		return nil, 0, fmt.Errorf("null aggregate returned more than one group(???)")
 	}
 
-	return result[0].Result, nil
+	return result[0].Result, result[0].Count, nil
 }
 
 func (t *taskRepository) GetLastUserTask(username string) (puzgen.Task, error) {
@@ -151,6 +158,30 @@ func (t *taskRepository) GetLastUserTask(username string) (puzgen.Task, error) {
 
 	opts := options.FindOne()
 	opts.SetSort(bson.D{{"game_data.date", -1}})
+
+	filter := bson.D{
+		{"$or", bson.A{
+			bson.D{{"game_data.white_player", username}},
+			bson.D{{"game_data.black_player", username}},
+		},
+		}}
+	cur := t.dbClient.TaskCollection.FindOne(ctx, filter, opts)
+	var task puzgen.Task
+	if err := cur.Decode(&task); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return puzgen.Task{}, nil
+		}
+		return puzgen.Task{}, err
+	}
+	return task, nil
+}
+
+func (t *taskRepository) GetFirstUserTask(username string) (puzgen.Task, error) {
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
+	defer cancel()
+
+	opts := options.FindOne()
+	opts.SetSort(bson.D{{"game_data.date", 1}})
 
 	filter := bson.D{
 		{"$or", bson.A{

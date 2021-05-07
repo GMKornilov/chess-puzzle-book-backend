@@ -57,6 +57,7 @@ func (t *TaskApi) StartTask(ctx *gin.Context) {
 			"error": "last should be positive integer",
 		})
 	}
+	fmt.Println(last)
 
 	worker := t.TaskWorkerFactory.CreateLichessScrapper(name, last)
 	t.totalJobs++

@@ -104,50 +104,28 @@ func (l *LichessGameScraper) Scrap() {
 		// add one second offset
 		url += fmt.Sprintf("&since=%d", lastTask.GameData.Date + 1000)
 	}
+	log.Println(url)
 
-	resp, err := http.Get(url)
+	games, err := l.GetGamesByUrl(url)
 	if err != nil {
 		l.mu.Lock()
 		defer l.mu.Unlock()
 		log.Println(err.Error())
-		l.err = fmt.Errorf("error fetching %s games", l.nickname)
 		l.done = true
-		return
-	}
-
-	if resp.StatusCode == http.StatusNotFound {
-		l.mu.Lock()
-		defer l.mu.Unlock()
-		l.err = fmt.Errorf("user %s doesn't exist on lichess", l.nickname)
-		return
-	}
-
-	defer resp.Body.Close()
-	scanner := chess.NewScanner(resp.Body)
-	buggedGames := make([]*chess.Game, 0)
-	for scanner.Scan() {
-		buggedGames = append(buggedGames, scanner.Next())
-	}
-	games := make([]*chess.Game, 0)
-	var tagGame *chess.Game
-	for i, game := range buggedGames {
-		if i%3 == 0 {
-			games = append(games, game)
-		} else if i%3 == 1 {
-			tagGame = game
+		if _, ok := err.(userNotFound); ok {
+			l.err = fmt.Errorf("user %s doesn't exist on lichess", l.nickname)
 		} else {
-			for _, tagPair := range tagGame.TagPairs() {
-				game.AddTagPair(tagPair.Key, tagPair.Value)
-			}
-			games = append(games, game)
+			l.err = fmt.Errorf("error fetching %s games", l.nickname)
 		}
+		return
 	}
 
+	var gamesInDb = 0
 	var doneTasks []puzgen.Task
-	if lastTask.StartFEN == "" {
+	if lastTask.StartFEN == "" || l.last - len(games) == 0 {
 		doneTasks = []puzgen.Task{}
 	} else {
-		doneTasks, err = l.taskRepo.GetLastUserTasks(l.nickname, int64(l.last - len(games)))
+		doneTasks, gamesInDb, err = l.taskRepo.GetLastUserTasks(l.nickname, int64(l.last - len(games)))
 		if err != nil {
 			l.mu.Lock()
 			defer l.mu.Unlock()
@@ -158,10 +136,40 @@ func (l *LichessGameScraper) Scrap() {
 		}
 	}
 
+	if len(games) + gamesInDb <= l.last {
+		firstTask, err := l.taskRepo.GetFirstUserTask(l.nickname)
+		if err != nil {
+			l.mu.Lock()
+			defer l.mu.Unlock()
+			log.Println(err.Error())
+			l.err = fmt.Errorf("error fetching first %s game", l.nickname)
+			l.done = true
+			return
+		}
+		if firstTask.GameData != (puzgen.Task{}).GameData {
+			url = fmt.Sprintf("https://lichess.org/api/games/user/%s?max=%d&until=%d", l.nickname, l.last, firstTask.GameData.Date - 1000)
+			log.Println(url)
+			gamesBefore, err := l.GetGamesByUrl(url)
+			if err != nil {
+				l.mu.Lock()
+				defer l.mu.Unlock()
+				log.Println(err.Error())
+				l.done = true
+				if _, ok := err.(userNotFound); ok {
+					l.err = fmt.Errorf("user %s doesn't exist on lichess", l.nickname)
+				} else {
+					l.err = fmt.Errorf("error fetching %s games", l.nickname)
+				}
+				return
+			}
+			games = append(games, gamesBefore...)
+		}
+	}
+
 	l.mu.Lock()
 	l.loadedTasks = true
 	l.overallTasks = l.last
-	l.doneTasks = l.last - len(games)
+	l.doneTasks = gamesInDb
 	l.mu.Unlock()
 
 	progressChan := make(chan struct{}, l.overallTasks)
@@ -197,4 +205,41 @@ func (l *LichessGameScraper) Scrap() {
 	defer l.mu.Unlock()
 	l.tasks = tasks
 	l.done = true
+}
+
+func (l *LichessGameScraper) GetGamesByUrl(url string) ([]*chess.Game, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return nil,	userNotFound{fmt.Errorf("user %s doesn't exist on lichess", l.nickname)}
+	}
+
+	scanner := chess.NewScanner(resp.Body)
+	buggedGames := make([]*chess.Game, 0)
+	for scanner.Scan() {
+		buggedGames = append(buggedGames, scanner.Next())
+	}
+	games := make([]*chess.Game, 0)
+	var tagGame *chess.Game
+	for i, game := range buggedGames {
+		if i%3 == 0 {
+			games = append(games, game)
+		} else if i%3 == 1 {
+			tagGame = game
+		} else {
+			for _, tagPair := range tagGame.TagPairs() {
+				game.AddTagPair(tagPair.Key, tagPair.Value)
+			}
+			games = append(games, game)
+		}
+	}
+	return games, nil
+}
+
+type userNotFound struct {
+	error
 }
