@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gmkornilov/chess-puzzle-book-backend/internal/dao"
 	"github.com/gmkornilov/chess-puzzle-book-backend/internal/scraper"
+	"log"
 	"net/http"
 	"strconv"
 	"sync"
@@ -57,7 +58,6 @@ func (t *TaskApi) StartTask(ctx *gin.Context) {
 			"error": "last should be positive integer",
 		})
 	}
-	fmt.Println(last)
 
 	worker := t.TaskWorkerFactory.CreateLichessScrapper(name, last)
 	t.totalJobs++
@@ -68,6 +68,7 @@ func (t *TaskApi) StartTask(ctx *gin.Context) {
 	defer t.mu.Unlock()
 	t.activeJobs[id] = &worker
 	worker.StartWork()
+	log.Println(gin.H{"job_id": id,})
 	ctx.JSON(http.StatusOK, gin.H{
 		"job_id": id,
 	})
@@ -97,6 +98,10 @@ func (t *TaskApi) GetJobStatus(ctx *gin.Context) {
 			})
 		}
 	} else {
+		log.Println(gin.H{
+			"done": done,
+			"progress": worker.Progress(),
+		})
 		ctx.JSON(http.StatusOK, gin.H{
 			"done": done,
 			"progress": worker.Progress(),

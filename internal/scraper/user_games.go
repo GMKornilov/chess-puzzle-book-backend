@@ -192,13 +192,16 @@ func (l *LichessGameScraper) Scrap() {
 		return
 	}
 
-	err = l.taskRepo.InsertAllTasks(tasks)
-	if err != nil {
-		l.mu.Lock()
-		defer l.mu.Unlock()
-		l.err = fmt.Errorf("error saving tasks to db")
-		l.done = true
-		return
+	if len(tasks) > 0 {
+		err = l.taskRepo.InsertAllTasks(tasks)
+		if err != nil {
+			l.mu.Lock()
+			defer l.mu.Unlock()
+			log.Println(err.Error())
+			l.err = fmt.Errorf("error saving tasks to db")
+			l.done = true
+			return
+		}
 	}
 
 	tasks = append(tasks, doneTasks...)

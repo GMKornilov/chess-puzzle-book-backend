@@ -33,14 +33,19 @@ func NewLiveLichessScraper(repository dao.TaskRepository, configuration config.S
 func (l *LiveLichessScraper) Main() error {
 	resp, err := http.Get("https://lichess.org/api/tv/feed")
 	if err != nil {
+		log.Println("Req error:" + err.Error())
 		return err
 	}
 	d := json.NewDecoder(resp.Body)
 
 	for {
 		var cur LiveMessage
+		if !d.More() {
+			return l.Main()
+		}
 		err := d.Decode(&cur)
 		if err != nil {
+			log.Println("Decode error:" + err.Error())
 			return err
 		}
 		switch cur.Action {
@@ -48,6 +53,7 @@ func (l *LiveLichessScraper) Main() error {
 			var gameStart GameStart
 			err = json.Unmarshal(cur.Data, &gameStart)
 			if err != nil {
+				log.Println("Unmarshal error:" + err.Error())
 				return err
 			}
 			var whiteInd int
@@ -96,6 +102,7 @@ func (l *LiveLichessScraper) Main() error {
 			log.Printf("New game with start position: %s\n", gameStart.Fen)
 			l.curAnalyzer, err = l.NewLiveGameAnalyzer(tags)
 			if err != nil {
+				log.Println("Error creating analyzer:", err.Error())
 				return err
 			}
 			l.curAnalyzer.StartAnalyze()
@@ -104,6 +111,7 @@ func (l *LiveLichessScraper) Main() error {
 			var gameTurn GameTurn
 			err = json.Unmarshal(cur.Data, &gameTurn)
 			if err != nil {
+				log.Println("Unmarshal error:" + err.Error())
 				return err
 			}
 			gameTurn.Fen += " - - 0 1"
@@ -111,6 +119,7 @@ func (l *LiveLichessScraper) Main() error {
 
 			fenFunc, err := chess.FEN(gameTurn.Fen)
 			if err != nil {
+				log.Println("Unmarshal fen error:" + err.Error())
 				return err
 			}
 			game := chess.NewGame(fenFunc)
