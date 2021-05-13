@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	maxDepth   = 10
+	maxDepth   = 6
 	Layout     = "2006.01.02"
 	TimeLayout = "15:04:05"
 )

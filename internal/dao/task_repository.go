@@ -9,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"math"
 	"time"
 )
 
@@ -27,6 +28,8 @@ type TaskRepository interface {
 
 	GetUserTasksBetweenDates(username string, startTime primitive.DateTime, endTime primitive.DateTime) ([]puzgen.Task, error)
 }
+
+const batchSize = 20
 
 type taskRepository struct {
 	dbClient *db.TaskDbClient
@@ -69,15 +72,21 @@ func (t *taskRepository) InsertTask(task puzgen.Task) error {
 }
 
 func (t *taskRepository) InsertAllTasks(tasks []puzgen.Task) error {
-	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
+	ctx, cancel := context.WithTimeout(context.TODO(), 20 * time.Second)
 	defer cancel()
 
-	toInsert := make([]interface{}, len(tasks))
-	for i := range tasks {
-		toInsert[i] = tasks[i]
+	for i := 0; i < len(tasks); i += batchSize {
+		sz := int(math.Min(float64(len(tasks) - i), float64(batchSize)))
+		toInsert := make([]interface{}, sz)
+		for j := 0; j < sz; j++ {
+			toInsert[j] = tasks[i + j]
+		}
+		_, err := t.dbClient.TaskCollection.InsertMany(ctx, toInsert)
+		if err != nil {
+			return err
+		}
 	}
-	_, err := t.dbClient.TaskCollection.InsertMany(ctx, toInsert)
-	return err
+	return nil
 }
 
 func (t *taskRepository) GetLastUserTasks(username string, n int64) ([]puzgen.Task, int, error) {
