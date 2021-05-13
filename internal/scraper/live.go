@@ -157,7 +157,7 @@ func (l *LiveGameAnalyzer) StartAnalyze() {
 }
 
 func (l *LiveGameAnalyzer) Analyze() {
-	watchedPositions := make(map[string]bool, 0)
+	watchedPositions := make(map[string][]puzgen.Turn, 0)
 	for game := range l.GameChan {
 		for _, tag := range l.tags {
 			game.AddTagPair(tag.Key, tag.Value)

@@ -36,7 +36,7 @@ func filterResults(results []uci.ScoreResult) []uci.ScoreResult {
 	return filteredResults
 }
 
-func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult, watchedPositions map[string]bool) (Turn, error) {
+func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult, watchedPositions map[string][]Turn) (Turn, error) {
 	if !res.Mate {
 		return Turn{}, nil
 	}
@@ -45,7 +45,7 @@ func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult, watc
 		return Turn{}, nil
 	}
 
-	watchedPositions[game.FEN()] = true
+	//watchedPositions[game.FEN()] = true
 
 	beginPos := game.Position()
 	firstMove, err := chess.UCINotation{}.Decode(beginPos, res.BestMoves[0])
@@ -85,30 +85,34 @@ func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult, watc
 
 	game.Move(ansMove)
 
-	if _, exists := watchedPositions[game.FEN()]; exists {
-		return Turn{}, nil
-	}
+	var continueTurns []Turn
+	if a, exists := watchedPositions[game.FEN()]; !exists {
+		fen := game.FEN()
+		e.SetFEN(fen)
 
-	fen := game.FEN()
-	e.SetFEN(fen)
-
-	results, err := e.GoDepth(res.Score, uci.IncludeLowerbounds | uci.IncludeUpperbounds)
-	if err != nil {
-		return Turn{}, err
-	}
-
-	filteredResults := filterResults(results.Results)
-	continueTurns := make([]Turn, 0)
-
-	for _, filteredResult := range filteredResults {
-		turn, err := generateCheckmate(game, e, filteredResult, watchedPositions)
+		results, err := e.GoDepth(res.Score, uci.IncludeLowerbounds | uci.IncludeUpperbounds)
 		if err != nil {
 			return Turn{}, err
 		}
-		if turn.SanNotation != "" {
-			continueTurns = append(continueTurns, turn)
+
+		filteredResults := filterResults(results.Results)
+		continueTurns := make([]Turn, 0)
+
+		for _, filteredResult := range filteredResults {
+			turn, err := generateCheckmate(game, e, filteredResult, watchedPositions)
+			if err != nil {
+				return Turn{}, err
+			}
+			if turn.SanNotation != "" {
+				continueTurns = append(continueTurns, turn)
+			}
 		}
+
+		watchedPositions[fen] = continueTurns
+	} else {
+		continueTurns = a
 	}
+
 
 	if len(continueTurns) == 0 {
 		return Turn{}, nil

@@ -68,7 +68,7 @@ func AnalyzeAllGames(path string, games []*chess.Game, progressChan chan<- struc
 }
 
 func analyzeGame(g *chess.Game, e *uci.Engine) ([]Task, error) {
-	watchedPositions := make(map[string]bool, 0)
+	watchedPositions := make(map[string][]Turn, 0)
 	moves := g.Moves()
 	newGame := chess.NewGame()
 	for _, tagPair := range g.TagPairs() {
@@ -96,7 +96,7 @@ func analyzeGame(g *chess.Game, e *uci.Engine) ([]Task, error) {
 	return res, nil
 }
 
-func GenerateTaskFromPosition(game chess.Game, e *uci.Engine, watchedPositions map[string]bool) (Task, error) {
+func GenerateTaskFromPosition(game chess.Game, e *uci.Engine, watchedPositions map[string][]Turn) (Task, error) {
 	if _, ok := watchedPositions[game.FEN()]; ok {
 		return Task{}, nil
 	}
