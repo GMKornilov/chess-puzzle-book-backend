@@ -3,6 +3,7 @@ package puzgen
 import (
 	"github.com/freeeve/uci"
 	"github.com/notnil/chess"
+	"sort"
 )
 
 func compareResults(baseRes uci.ScoreResult, cmpRes uci.ScoreResult) bool {
@@ -13,6 +14,18 @@ func compareResults(baseRes uci.ScoreResult, cmpRes uci.ScoreResult) bool {
 }
 
 func filterResults(results []uci.ScoreResult) []uci.ScoreResult {
+	sort.Slice(results, func(i, j int) bool {
+		if results[i].Mate {
+			if !results[j].Mate {
+				return true
+			}
+			return results[i].Score <= results[j].Score
+		}
+		if results[j].Mate {
+			return false
+		}
+		return results[i].Score >= results[j].Score
+	})
 	baseRes := results[0]
 	filteredResults := make([]uci.ScoreResult, 0)
 	for _, item := range results {
@@ -25,10 +38,6 @@ func filterResults(results []uci.ScoreResult) []uci.ScoreResult {
 
 func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult, watchedPositions map[string]bool) (Turn, error) {
 	if !res.Mate {
-		return Turn{}, nil
-	}
-
-	if _, exists := watchedPositions[game.FEN()]; exists {
 		return Turn{}, nil
 	}
 
@@ -61,7 +70,7 @@ func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult, watc
 	var ansMoveUci string
 	if len(res.BestMoves) == 1 {
 		e.SetFEN(game.FEN())
-		ansResults, err := e.GoDepth(res.Score)
+		ansResults, err := e.GoDepth(res.Score, uci.IncludeLowerbounds | uci.IncludeUpperbounds)
 		if err != nil {
 			return Turn{}, err
 		}
@@ -75,10 +84,15 @@ func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult, watc
 	}
 
 	game.Move(ansMove)
+
+	if _, exists := watchedPositions[game.FEN()]; exists {
+		return Turn{}, nil
+	}
+
 	fen := game.FEN()
 	e.SetFEN(fen)
 
-	results, err := e.GoDepth(res.Score)
+	results, err := e.GoDepth(res.Score, uci.IncludeLowerbounds | uci.IncludeUpperbounds)
 	if err != nil {
 		return Turn{}, err
 	}
@@ -95,7 +109,7 @@ func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult, watc
 			continueTurns = append(continueTurns, turn)
 		}
 	}
-	
+
 	if len(continueTurns) == 0 {
 		return Turn{}, nil
 	}
