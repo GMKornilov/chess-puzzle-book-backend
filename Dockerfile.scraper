@@ -1,0 +1,22 @@
+FROM golang:1.15 as build
+
+RUN mkdir app
+WORKDIR app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    stockfish \
+    && apt-get clean
+
+ENV STOCKFISH_PATH="stockfish"
+ENV STOCKFISH_ARGS=""
+
+COPY cmd/scraper cmd/scraper
+COPY internal internal
+COPY pkg pkg
+COPY go.mod .
+
+RUN go mod download
+
+RUN go build -o main github.com/gmkornilov/chess-puzzle-book-backend/cmd/scraper
+
+CMD ["./main"]
