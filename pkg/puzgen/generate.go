@@ -70,7 +70,7 @@ func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult, watc
 	var ansMoveUci string
 	if len(res.BestMoves) == 1 {
 		e.SetFEN(game.FEN())
-		ansResults, err := e.GoDepth(res.Score, uci.IncludeLowerbounds | uci.IncludeUpperbounds)
+		ansResults, err := e.GoDepth(res.Score, uci.IncludeLowerbounds|uci.IncludeUpperbounds)
 		if err != nil {
 			return Turn{}, err
 		}
@@ -90,7 +90,7 @@ func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult, watc
 		fen := game.FEN()
 		e.SetFEN(fen)
 
-		results, err := e.GoDepth(res.Score, uci.IncludeLowerbounds | uci.IncludeUpperbounds)
+		results, err := e.GoDepth(res.Score, uci.IncludeLowerbounds|uci.IncludeUpperbounds)
 		if err != nil {
 			return Turn{}, err
 		}
@@ -113,11 +113,10 @@ func generateCheckmate(game chess.Game, e *uci.Engine, res uci.ScoreResult, watc
 		continueTurns = a
 	}
 
-
 	if len(continueTurns) == 0 {
 		return Turn{}, nil
 	}
-	
+
 	resTurn := Turn{
 		SanNotation:           chess.AlgebraicNotation{}.Encode(beginPos, firstMove),
 		IsLastTurn:            false,

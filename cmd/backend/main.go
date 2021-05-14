@@ -16,7 +16,6 @@ func main() {
 		panic(err)
 	}
 
-
 	db, err := db.NewDbClientBackend(cfg)
 	if err != nil {
 		panic(err)

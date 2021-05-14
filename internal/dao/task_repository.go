@@ -72,14 +72,14 @@ func (t *taskRepository) InsertTask(task puzgen.Task) error {
 }
 
 func (t *taskRepository) InsertAllTasks(tasks []puzgen.Task) error {
-	ctx, cancel := context.WithTimeout(context.TODO(), 20 * time.Second)
+	ctx, cancel := context.WithTimeout(context.TODO(), 20*time.Second)
 	defer cancel()
 
 	for i := 0; i < len(tasks); i += batchSize {
-		sz := int(math.Min(float64(len(tasks) - i), float64(batchSize)))
+		sz := int(math.Min(float64(len(tasks)-i), float64(batchSize)))
 		toInsert := make([]interface{}, sz)
 		for j := 0; j < sz; j++ {
-			toInsert[j] = tasks[i + j]
+			toInsert[j] = tasks[i+j]
 		}
 		_, err := t.dbClient.TaskCollection.InsertMany(ctx, toInsert)
 		if err != nil {

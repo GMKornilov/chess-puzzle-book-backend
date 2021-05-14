@@ -35,12 +35,12 @@ func NewDbClientBackend(cfg *config.BackendConfiguration) (*TaskDbClient, error)
 
 	dbClient.TaskCollection = client.Database(cfg.Database.DatabaseName).Collection(cfg.Database.Collection)
 	if dbClient.TaskCollection == nil {
-		return nil, fmt.Errorf("Can't resolve collection %s", cfg.Database.DatabaseName + "." + cfg.Database.Collection)
+		return nil, fmt.Errorf("Can't resolve collection %s", cfg.Database.DatabaseName+"."+cfg.Database.Collection)
 	}
 	return dbClient, nil
 }
 
-func NewDbClientScraper (cfg *config.ScraperConfiguration) (*TaskDbClient, error) {
+func NewDbClientScraper(cfg *config.ScraperConfiguration) (*TaskDbClient, error) {
 	clientOpts := options.Client().ApplyURI(cfg.Database.Address)
 
 	dbClient := &TaskDbClient{}
@@ -58,7 +58,7 @@ func NewDbClientScraper (cfg *config.ScraperConfiguration) (*TaskDbClient, error
 
 	dbClient.TaskCollection = client.Database(cfg.Database.DatabaseName).Collection(cfg.Database.Collection)
 	if dbClient.TaskCollection == nil {
-		return nil, fmt.Errorf("Can't resolve collection %s", cfg.Database.DatabaseName + "." + cfg.Database.Collection)
+		return nil, fmt.Errorf("Can't resolve collection %s", cfg.Database.DatabaseName+"."+cfg.Database.Collection)
 	}
 	return dbClient, nil
 }

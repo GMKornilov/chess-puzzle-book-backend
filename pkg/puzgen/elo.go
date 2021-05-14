@@ -60,7 +60,7 @@ func estimateElo(moves []*chess.Move, game chess.Game, turn Turn, playerElo int)
 
 	percent := estimatePercent(moves, game, turn)
 
-	return playerElo + int(float64(coeff) * (percent - expectedPercent))
+	return playerElo + int(float64(coeff)*(percent-expectedPercent))
 }
 
 func estimateAllElos(moves []*chess.Move, game chess.Game, turns []Turn, playerElo int) int {

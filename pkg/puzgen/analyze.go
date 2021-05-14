@@ -105,7 +105,7 @@ func GenerateTaskFromPosition(game chess.Game, e *uci.Engine, watchedPositions m
 	if err != nil {
 		return Task{}, err
 	}
-	result, err := e.GoDepth(maxDepth, uci.IncludeLowerbounds | uci.IncludeUpperbounds)
+	result, err := e.GoDepth(maxDepth, uci.IncludeLowerbounds|uci.IncludeUpperbounds)
 	if err != nil {
 		return Task{}, err
 	}
@@ -148,9 +148,9 @@ func GenerateTaskFromPosition(game chess.Game, e *uci.Engine, watchedPositions m
 		return Task{}, err
 	}
 
-	gameTime = gameTime.Add(time.Second * time.Duration(extraTime.Second()) +
-		time.Minute * time.Duration(extraTime.Minute()) +
-		time.Hour * time.Duration(extraTime.Hour()))
+	gameTime = gameTime.Add(time.Second*time.Duration(extraTime.Second()) +
+		time.Minute*time.Duration(extraTime.Minute()) +
+		time.Hour*time.Duration(extraTime.Hour()))
 
 	if len(possibleTurns) == 0 {
 		return Task{}, nil
