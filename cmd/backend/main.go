@@ -32,5 +32,5 @@ func main() {
 	r.GET("/task/:username", taskApi.StartTask)
 	r.GET("/job/:job_id", taskApi.GetJobStatus)
 
-	r.Run(cfg.Server.Host + cfg.Server.Port)
+	r.Run(":" + cfg.Server.Port)
 }

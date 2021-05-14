@@ -6,8 +6,7 @@ import (
 
 type BackendConfiguration struct {
 	Server struct {
-		Host string `envconfig:"SERVER_HOST"`
-		Port string `envconfig:"SERVER_PORT"`
+		Port string `envconfig:"PORT"`
 	}
 	Database struct {
 		Address      string `envconfig:"MONGO_ADDRESS"`
